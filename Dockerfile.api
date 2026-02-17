@@ -1,0 +1,24 @@
+FROM golang:1.26-bookworm
+
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends git ca-certificates sqlite3 nodejs npm \
+  && ln -sf /usr/local/go/bin/go /usr/bin/go \
+  && rm -rf /var/lib/apt/lists/*
+
+ENV PATH="/usr/local/go/bin:/usr/bin:${PATH}"
+
+WORKDIR /app
+
+COPY api/package.json /app/api/package.json
+RUN cd /app/api && npm install
+
+COPY cpg-gen-src /app/cpg-gen-src
+COPY tools /app/tools
+COPY api /app/api
+
+RUN chmod +x /app/tools/*.sh
+
+ENV CPG_DB_PATH=/app/data/cpg.db
+ENV PORT=8787
+
+EXPOSE 8787

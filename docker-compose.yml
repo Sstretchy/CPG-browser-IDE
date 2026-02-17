@@ -1,0 +1,49 @@
+services:
+  data-init:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    working_dir: /app
+    command: ["/bin/bash", "-c", "/app/tools/init_data.sh"]
+    volumes:
+      - cpg_data:/app/data
+      - cpg_repos:/app/repos
+    environment:
+      - CPG_DB_PATH=/app/data/cpg.db
+      - CPG_GOMAXPROCS=${CPG_GOMAXPROCS:-1}
+      - CPG_GOGC=${CPG_GOGC:-20}
+      - CPG_GOMEMLIMIT=${CPG_GOMEMLIMIT:-4GiB}
+      - GOFLAGS=${GOFLAGS:--p=1}
+    restart: "no"
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    working_dir: /app
+    command: ["/bin/bash", "-c", "npm --prefix /app/api run dev"]
+    depends_on:
+      data-init:
+        condition: service_completed_successfully
+    volumes:
+      - cpg_data:/app/data
+    environment:
+      - CPG_DB_PATH=/app/data/cpg.db
+      - PORT=8787
+    ports:
+      - "8787:8787"
+
+  ui:
+    build:
+      context: .
+      dockerfile: Dockerfile.ui
+    working_dir: /app
+    command: ["npm", "--prefix", "/app/ui", "run", "dev"]
+    depends_on:
+      - api
+    ports:
+      - "5173:5173"
+
+volumes:
+  cpg_data:
+  cpg_repos:
